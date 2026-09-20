@@ -18,27 +18,56 @@
 [![Swift 6+](https://img.shields.io/badge/Swift-6%2B-f05138?logo=swift&logoColor=white)](Package.swift)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**A native macOS workbench for naming photo folders and files.**
-Import a collection, see which names already follow your rule, fill in a small
-spreadsheet, and preview every change before it touches the filesystem.
-Undo records stay on your Mac and remain available after restarting.
+**Turn inconsistent file and folder names into clear dates, events, places and notes.**
+PhotoNaming is a native macOS app that puts the original name beside six editable
+fields, highlights the items that need attention, and writes your reviewed changes
+back to the actual files. Everything stays on your Mac.
+
+## Why choose PhotoNaming
+
+A photo collection can contain `2026.9.20 Trip`, `New folder`, and neatly organized
+folders at the same time. Some need a date, some need a title, and others need no
+change at all. Applying one text replacement to the whole collection leaves
+those different decisions to you.
+
+PhotoNaming brings those decisions into one table:
+
+- **Fix only what needs fixing.** Filter non-compliant names and keep already
+  compliant rows read-only. Useful values are parsed for you; unknown dates stay
+  blank for your review.
+- **Work with meaningful fields.** Fill in dates, titles and notes instead of
+  assembling separators or writing a renaming expression. Edit individual rows
+  or apply the same value to selected fields across several rows.
+- **Keep control when names reach the disk.** See original and proposed names
+  before confirming. Existing targets are not overwritten, results are reported
+  per item, and completed renames have persistent undo records.
+
+### Where common approaches become extra work
+
+| Approach | Friction in a mixed collection | PhotoNaming's advantage |
+| --- | --- | --- |
+| Rename folders one by one in Finder | Repeating dates and separators, then manually checking consistency | Six structured fields, calendar validation and automatic formatting |
+| Simple find/replace, prefixing or numbering | Different missing dates and titles need different corrections | Per-row repair alongside selective batch field assignment |
+| Plan names in a separate spreadsheet | The plan still has to be transferred to the right files | Original names, editable fields and confirmed disk changes in one workflow |
+| Write a one-off script | Preview, collision checks, partial-result reporting and undo need to be implemented | These steps are built into the application |
+
+### A good fit for
+
+- **Travel and family collections:** standardize dates, events and locations
+  across folders gathered from different occasions.
+- **An old photo archive:** quickly separate consistent names from the backlog
+  and complete missing information without redoing the whole collection.
+- **Study and project folders:** apply a shared date/title convention while
+  keeping a different secondary title or note for each item.
+
+**The workflow:** import → filter → fill in fields → preview → confirm → undo if needed.
+The focus is human-reviewed naming. This version does not identify photo contents,
+extract EXIF dates or replace an arbitrary regular-expression pipeline.
 
 ![PhotoNaming showing original-name status and six naming fields](docs/images/app.png)
 
 *Actual application with synthetic demo folders. Version 1.0 uses a Chinese
 interface; both English and Chinese instructions are included below.*
-
-## Why PhotoNaming
-
-| What you need | What PhotoNaming provides |
-| --- | --- |
-| Find inconsistent names | All / compliant / non-compliant filters based on actual names on disk |
-| Understand a good name | Automatic parsing into year, month, day, primary title, secondary title and note |
-| Repair an incomplete name | Editable cells, keyboard navigation and selective batch field assignment |
-| Keep separators out of the way | Underscores hidden in the table and inserted into actual names automatically |
-| Know what will happen | Selected-item preview, conflict checks and explicit confirmation |
-| Recover from a naming mistake | Persistent, reverse-order undo with no overwrite of existing targets |
-| Keep photos local | No account, uploads, telemetry, external runtime or image-content processing |
 
 ## Install
 
@@ -172,25 +201,46 @@ are included in the repository.
 [![English](https://img.shields.io/badge/Language-English-24292f)](#english)
 [![简体中文](https://img.shields.io/badge/语言-简体中文-1677ff)](#中文)
 
-**一个原生 macOS 照片文件夹与文件命名工作台。**
-导入一批文件，筛出不符合规则的名称，像填写表格一样补齐信息，预览并确认后同步到磁盘。
-改名记录只保存在本机，退出并重新打开后仍能撤销。
+**把混乱的文件名拆成清楚的日期、事件、地点和备注，再确认写回真实文件。**
+PhotoNaming 是一个原生 macOS 命名工具：左边保留原名，右边像表格一样填写六个字段，
+先筛出需要处理的项目，再预览和确认改名。整个过程都在你的 Mac 上完成。
+
+### 为什么需要它，为什么选它
+
+一批照片文件夹里，可能同时存在 `2026.9.20 旅行`、`新建文件夹`，以及已经整理好的规范名称。
+有些缺日期，有些缺主题，有些完全不需要改。面对这种情况，统一替换一段文字，
+仍然需要你逐个判断每个名字应该表达什么。
+
+PhotoNaming 把这些判断集中到一张表里，主要解决三件事：
+
+- **只整理有问题的部分。** 一键筛出未符合项，已符合项完整解析并保持只读。
+  能识别的内容保留，不知道的日期留给你确认，减少重复录入。
+- **填写信息，少操心格式。** 直接填日期、标题、备注，不必逐个拼下划线或编写改名表达式。
+  每行可以单独修正，也能只对选中的几列统一赋值。
+- **改之前看得清，改之后有记录。** 原名和新名先对照预览，确认后才写入。
+  同名不覆盖，逐项报告结果，已完成操作保留可跨重启使用的撤销记录。
+
+### 常见方案的痛点，我们怎样解决
+
+| 常见做法 | 面对混合命名时的麻烦 | PhotoNaming 的优势 |
+| --- | --- | --- |
+| 在 Finder 里逐个改名 | 反复输入日期与分隔符，还要自己检查是否统一 | 六字段填写、日期校验、自动生成规范名称 |
+| 简单批量替换、加前缀或编号 | 不同项目缺少的信息不同，一条规则难以完成逐项修正 | 单行修正与按字段批量赋值结合 |
+| 先在表格里列好新名字 | 还要把结果准确对应并写回磁盘，计划与执行分成两步 | 原名、编辑和确认写回放在同一个流程里 |
+| 自己写一次性脚本 | 还需实现预览、冲突检查、部分失败处理与撤销记录 | 这些步骤已集成，按界面操作即可 |
+
+### 哪些场景值得用
+
+- **旅行与家庭照片：** 不同活动留下的文件夹日期写法各异，需要统一日期、事件与地点。
+- **积累多年的照片归档：** 先把已经规范的部分筛开，只补齐剩余文件夹的信息。
+- **学习与项目资料：** 统一日期和主题，同时为各个项目保留不同的二级标题与备注。
+
+**使用流程：导入 → 筛选 → 填写 → 预览 → 确认改名 → 必要时撤销。**
+本版专注由你核对的信息整理，不识别照片内容、不提取 EXIF 日期，也不提供任意正则改名流水线。
 
 ![照片命名：原文件状态与六个解析字段](docs/images/app.png)
 
 *截图来自真实应用，使用专门创建的模拟文件夹；1.0 版应用界面为中文。*
-
-### 能做什么
-
-| 使用场景 | 功能 |
-| --- | --- |
-| 找出命名不规范的项目 | 按磁盘原名筛选全部、已符合、未符合 |
-| 理解已有名称 | 自动解析年、月、日、一级标题、二级标题和备注 |
-| 补齐缺失信息 | 单元格编辑、键盘切换、多行选择与按字段批量赋值 |
-| 不再手动拼下划线 | 表格隐藏分隔符，真实名称自动保留 |
-| 改名前心里有数 | 预览原名、新名和位置，检查冲突，确认后执行 |
-| 需要恢复原名 | 持久操作记录、按反向顺序撤销、同名不覆盖 |
-| 保持本地与轻量 | 无需账号、不上传文件、不发送遥测、不读取图片内容 |
 
 ### 安装
 
