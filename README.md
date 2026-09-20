@@ -198,11 +198,11 @@ are included in the repository.
 **Apple Silicon / arm64** 安装包，需要 **macOS 14 或更新版本**。
 本次发布不包含 Intel Mac 二进制包。
 
-- **DMG：**打开磁盘映像，将 `照片命名.app` 拖入 Applications，然后推出映像。
-- **ZIP：**解压后，将 `照片命名.app` 移入应用程序目录或你自己的其他目录。
+- **DMG：** 打开磁盘映像，将 `照片命名.app` 拖入 Applications，然后推出映像。
+- **ZIP：** 解压后，将 `照片命名.app` 移入应用程序目录或你自己的其他目录。
 - 两种包都附带中英双语离线说明和 MIT 许可证，无需安装额外运行环境。
 
-**签名说明：**应用使用本地临时签名，**没有 Developer ID 签名，也未经 Apple 公证**。
+**签名说明：** 应用使用本地临时签名，**没有 Developer ID 签名，也未经 Apple 公证**。
 若首次打开被拦截，先核实下载来源，再按 Apple 的单应用放行流程进入
 **系统设置 → 隐私与安全性 → 仍要打开**。具体操作见 [Apple 官方说明](https://support.apple.com/102445)。
 不需要全局关闭 Gatekeeper。
