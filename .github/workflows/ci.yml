@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version
+      - name: Debug tests
+        run: swift test
+      - name: Optimized release tests
+        run: swift test -c release
+      - name: Documentation and script checks
+        run: |
+          python3 scripts/check-docs.py
+          bash -n scripts/build-icon.sh scripts/build-app.sh scripts/verify-app.sh scripts/package-release.sh
+      - name: Build and verify application
+        run: |
+          bash scripts/build-app.sh
+          bash scripts/verify-app.sh
