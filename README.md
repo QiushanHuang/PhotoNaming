@@ -66,10 +66,15 @@ places and notes that make each folder easy to recognize.
 
 ![PhotoNaming showing original-name status and six naming fields](docs/images/app.png)
 
-*A collection at a glance: organized folders above, names ready to complete below.
-The interface is Chinese; the steps below include English translations of each button.*
+*An earlier interface: organized folders above, names ready to complete below.
+Button placement may differ; the steps below include English translations.*
 
 ## Install
+
+The current source and locally built app are **1.1.0**. As of 2026-10-28, the
+latest published GitHub release is **1.0.0** and does not include the time editor
+or the redesigned interface. Build the current version from source using the
+instructions below; see the [1.1.0 update notes](docs/releases/v1.1.0.md).
 
 Download the **Apple Silicon / arm64** package from
 [the latest release](https://github.com/QiushanHuang/PhotoNaming/releases/latest).
@@ -116,11 +121,15 @@ matching line in `SHA256SUMS.txt`.
 | Interface label | Meaning |
 | --- | --- |
 | 全部 / 已符合 / 未符合 | All / compliant / non-compliant original names |
-| 原文件状态 | Original status: compliance and original file/folder name |
-| 解析状态 | Parsed fields: year, month, day, primary title, secondary title, note |
+| 原文件 | Original status and exact file/folder name |
+| 命名字段 | Parsed fields: year, month, day, primary title, secondary title, note |
 | 移出列表 | Clear a row from the list while keeping the file in place |
 | 在 Finder 中显示 | Reveal the selected item in Finder (right-click a row) |
 | 查看结果 | View completed, failed or skipped operations |
+
+**Time editing:** click **修改时间…** to set checked creation/capture/modification
+times, shift a batch by an offset, or sync file dates to capture dates. Review
+per-file changes before confirming; [time editor guide](docs/USER_GUIDE.md).
 
 Find more examples and troubleshooting steps in the [user guide](docs/USER_GUIDE.md).
 Finish and confirm your edits before closing the app; drafts last for the current
@@ -144,7 +153,7 @@ Trailing empty fields are omitted; an empty field in the middle keeps its positi
 | A photo file | `2026-09-20_Family gathering_Garden_Favorites.jpg` |
 
 Type the date, titles and note into their own cells; PhotoNaming adds the
-underscores to the saved name and displays them as spaces in the table.
+underscores to the saved name. The original-name column and preview show actual names.
 Dates already present in a name are filled in for you to review. For an undated
 folder, enter the date you want to use for that collection. Calendar validation
 helps catch invalid dates before you rename.
@@ -169,7 +178,7 @@ organized collection back. You can also use the file picker to import a collecti
 Rename history is saved in `~/Library/Application Support/PhotoNaming/History/`,
 so you can undo after reopening the app. Keep this folder for recovery; its records
 include your file paths. See the [user guide](docs/USER_GUIDE.md) for detailed
-recovery steps and the [release notes](docs/releases/v1.0.0.md) for compatibility details.
+recovery steps and the [update notes](docs/releases/v1.1.0.md) for compatibility details.
 
 ## Build and contribute
 
@@ -189,7 +198,7 @@ open dist/照片命名.app
 
 `bash scripts/package-release.sh` creates the distributable archives and checksums.
 See [Contributing](CONTRIBUTING.md), [Changelog](CHANGELOG.md),
-[security and privacy](SECURITY.md) and [v1.0.0 release notes](docs/releases/v1.0.0.md).
+[security and privacy](SECURITY.md) and [v1.1.0 update notes](docs/releases/v1.1.0.md).
 
 Created and maintained by **[Qiushan · @QiushanHuang](https://github.com/QiushanHuang)**.
 See [contributors and attribution](CONTRIBUTORS.md). Licensed under the
@@ -199,6 +208,8 @@ are included in the repository.
 ---
 
 <a id="中文"></a>
+
+新增 **修改时间…**：统一指定时间、按差值平移（可用参考照片计算）、文件创建/修改时间同步到拍摄时间。支持单独勾选字段、时区与写入前预览，详见[使用指南](docs/USER_GUIDE.md)。
 
 ## 中文
 
@@ -252,9 +263,13 @@ PhotoNaming 把这些判断集中到一张表里，主要解决三件事：
 
 ![照片命名：原文件状态与六个解析字段](docs/images/app.png)
 
-*一眼看清整理进度：上方是已规范的文件夹，下方直接补齐待整理的名称。*
+*早期界面示例：按钮位置可能与当前版本不同。*
 
 ### 安装
+
+当前源码及本机编译版本为 **1.1.0**。截至 2026-10-28，GitHub 最新公开发布版仍为
+**1.0.0**，不包含时间编辑与新版界面。使用下方构建步骤可从源码编译当前版本；
+详细变化见 [1.1.0 更新说明](docs/releases/v1.1.0.md)。
 
 从[最新发布页](https://github.com/QiushanHuang/PhotoNaming/releases/latest)下载
 **Apple Silicon / arm64** 安装包，适用于运行 **macOS 14 或更新版本**的 Apple Silicon Mac。
@@ -291,8 +306,8 @@ shasum -a 256 -c SHA256SUMS.txt
 | 界面入口 | 作用 |
 | --- | --- |
 | 全部 / 已符合 / 未符合 | 按当前文件名分类，随时查看还有哪些项目需要整理 |
-| 原文件状态 | 是否按要求、原文件或文件夹名称 |
-| 解析状态 | 年、月、日、一级标题、二级标题、备注 |
+| 原文件 | 是否按要求、真实的原文件或文件夹名称 |
+| 命名字段 | 年、月、日、一级标题、二级标题、备注 |
 | 移出列表 | 将项目移出待办列表，文件仍保留在原位置 |
 | 在 Finder 中显示 | 右键行，定位真实文件 |
 | 查看结果 | 查看完成、失败、跳过及撤销结果 |
@@ -317,7 +332,7 @@ YYYY-MM-DD_一级标题_二级标题_备注.扩展名
 | 没有二级标题，但有备注 | `2026-09-20_家庭聚会__精选` |
 | 照片文件 | `2026-09-20_家庭聚会_花园_精选.jpg` |
 
-在各自的单元格里填写日期、标题和备注即可，应用会为真实名称添加下划线，表格中则显示为空格。
+在各自的单元格里填写日期、标题和备注即可，应用会为真实名称添加下划线；原名称和预览显示真实名称。
 名称里已有的日期会自动填入，供你核对；没有日期的文件夹，由你填写这组内容的归属日期。
 日期校验会帮你发现无效日期。跨日内容可用起始日，并在备注说明范围。
 
@@ -336,7 +351,7 @@ YYYY-MM-DD_一级标题_二级标题_备注.扩展名
 
 改名记录保存在 `~/Library/Application Support/PhotoNaming/History/`，重新打开应用后仍可用于撤销。
 请保留此目录以便恢复，其中会记录你的文件路径。
-详细恢复步骤见[操作指南](docs/USER_GUIDE.md#中文指南)，版本适用范围见[发布说明](docs/releases/v1.0.0.md)。
+详细恢复步骤见[操作指南](docs/USER_GUIDE.md#中文指南)，版本适用范围见[更新说明](docs/releases/v1.1.0.md)。
 
 ### 开发与贡献
 
@@ -355,7 +370,7 @@ open dist/照片命名.app
 
 运行 `bash scripts/package-release.sh` 可生成安装包与校验和。
 [贡献指南](CONTRIBUTING.md) · [更新记录](CHANGELOG.md) · [安全与隐私](SECURITY.md) ·
-[v1.0.0 发布说明](docs/releases/v1.0.0.md)
+[v1.1.0 更新说明](docs/releases/v1.1.0.md)
 
 作者与维护者：**[Qiushan · @QiushanHuang](https://github.com/QiushanHuang)**。
 [贡献署名](CONTRIBUTORS.md) · [MIT 许可证](LICENSE) · [Logo 与设计说明](assets/branding/README.md)

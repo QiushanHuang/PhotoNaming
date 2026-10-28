@@ -1,0 +1,7 @@
+ExifTool 13.59 by Phil Harvey.
+Vendored unmodified executable, lib/, README and LICENSE from:
+https://github.com/exiftool/exiftool (master snapshot retrieved 2026-10-21).
+Upstream README permits redistribution under the same terms as Perl itself
+(either the Perl Artistic License or GPL); the supplied LICENSE contains GPLv3.
+PhotoNaming invokes ExifTool as a separate Perl process. No network service is used.
+All upstream copyright notices are retained. User photos are not included.

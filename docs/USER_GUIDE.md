@@ -6,6 +6,9 @@
 
 ## Before you start
 
+This guide describes the 1.1.0 source build. As of 2026-10-28, the latest
+published release is 1.0.0 and does not include the time editor or redesigned UI.
+
 Download from the [official releases](https://github.com/QiushanHuang/PhotoNaming/releases).
 Use an Apple Silicon Mac running macOS 14+. The app interface is Chinese; the
 button labels below let English readers follow the same workflow. Start with a
@@ -59,7 +62,7 @@ Examples:
 ```
 
 The double underscore preserves a missing secondary title. Trailing empty fields
-are omitted. All underscores are hidden in table names and previews. Use
+are omitted. Original names and previews show the actual underscores. Use
 **在 Finder 中显示** (right-click a row) to locate the actual item.
 
 ## Preview and confirm
@@ -119,6 +122,9 @@ service needs removal.
 
 ### 安装与准备
 
+本指南对应 1.1.0 源码版本。截至 2026-10-28，最新公开发布版仍为 1.0.0，
+不包含时间编辑和新版界面。
+
 从[官方 Releases](https://github.com/QiushanHuang/PhotoNaming/releases)下载，使用
 macOS 14 及以上的 Apple Silicon Mac。打开 DMG，把 `照片命名.app` 拖入应用程序后推出；
 也可解压 ZIP，把应用放入自己有权限的目录。初次尝试时可先用一小批复制样例确定命名习惯。
@@ -155,7 +161,7 @@ macOS 14 及以上的 Apple Silicon Mac。打开 DMG，把 `照片命名.app` �
 2026-09-20_旅行_海边_精选.jpg
 ```
 
-中间空字段用两个下划线保留位置，末尾空字段省略。表格和预览隐藏下划线；
+中间空字段用两个下划线保留位置，末尾空字段省略。原名称和预览显示真实下划线；
 右键 **在 Finder 中显示** 可定位真实文件。
 
 ### 确认改名
@@ -196,3 +202,54 @@ macOS 14 及以上的 Apple Silicon Mac。打开 DMG，把 `照片命名.app` �
 删除历史目录会失去撤销记录。无需注销账号或卸载后台服务。
 
 [返回英文 / Back to English ↑](#english-guide)
+
+## Edit photo and video times / 修改照片与视频时间
+
+Click **修改时间…** (Edit times). Existing naming compliance does not restrict this
+feature. Use the main window selection or choose files/folders in the time editor;
+folders are scanned recursively, skipping hidden items, symlinks and app bundles.
+
+- **统一到指定时间** (Set to one time): set checked fields to the same date and time,
+  down to seconds. Missing content dates can be added in this mode.
+- **按差值平移** (Shift): add/subtract hours, minutes or seconds from each checked
+  field. Positive values move forward, negative values move backward. Photo
+  intervals remain intact. To calculate the offset, open **用参考照片计算…**,
+  choose a reference photo, enter its correct time, and click **计算差值**.
+- **同步到拍摄时间** (Sync): use each photo's own content capture time for its
+  checked filesystem creation/modification fields. Missing capture times are
+  reported and excluded; filesystem times are never substituted as capture times.
+
+**文件创建时间** is the filesystem birth time; **内容拍摄时间** is embedded
+EXIF/QuickTime metadata; **文件修改时间** is the filesystem modification time.
+Select the intended timezone explicitly, then **预览修改** (Preview), review old/new
+values per path, and choose **写入** before the final confirmation. Unchecked fields retain their values.
+The timezone is used for metadata without an existing offset; existing offsets
+are respected when reading. Written capture dates receive the chosen timezone.
+
+修改时间入口与改名独立。三种模式分别用于整批统一、校正相机偏差和消除 Finder 文件时间
+与拍摄时间不一致。可以单独勾选三个字段，例如只把文件创建时间同步为拍摄时间。
+更改时区会重新读取文件；参考校准先点 **用参考照片计算…**，选择照片并输入正确时间，再点 **计算差值**。
+预览列出完整路径和三项时间前后值；异常项目列明原因，不会用文件时间猜拍摄时间。
+
+Writes run locally in the background and are verified per file. Metadata changes
+use a same-directory temporary copy without image/video re-encoding; unchecked
+file timestamps are restored after replacement. exFAT uses recoverable staged
+moves because it does not support atomic exchange; avoid unplugging the drive or
+editing/moving the same files during execution. A failed recovery retains the
+original at the path shown in the error/log. Filesystem birth-time precision may
+be limited by the target volume: the macOS exFAT driver writes birth times only
+to whole seconds, including when restoring an unchecked creation timestamp. No permanent media backups are kept. Time logs
+are separate from rename history under the app's Application Support/PhotoNaming/
+TimeHistory directory; **撤销上次改名** does not undo time edits. Successful items
+are not automatically retried. Click **重新读取** (Reload) to read the current state before
+another edit. Support depends on ExifTool's ability to write each media format;
+unsupported or malformed media are reported individually.
+
+时间修改不保留长期照片备份，临时副本用于写入与核验，完成后清理。发生故障时查看逐项
+结果与时间日志；不要直接重复平移。时间编辑与“撤销上次改名”分开，当前不提供时间撤销。
+字幕、文档等非媒体文件不自动纳入时间编辑。已有命名草稿保留，但修改时间后可能影响
+旧改名记录的身份校验；需要先完成旧改名撤销时，应在时间编辑前处理。
+
+ExifTool 13.59 by Phil Harvey is bundled and invoked as a separate local Perl
+process, under the same terms as Perl (Artistic License or GPL). Its original
+README, notices and GPL license are included in the app's Resources/ExifTool.

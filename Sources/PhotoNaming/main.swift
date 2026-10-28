@@ -61,8 +61,8 @@ final class GroupHeader: NSTableHeaderView {
             let split = headerRect(ofColumn: 2).minX
             NSColor.controlBackgroundColor.setFill(); NSRect(x: 0, y: 0, width: split, height: 31).fill()
             blueSurface.setFill(); NSRect(x: split, y: 0, width: bounds.width - split, height: 31).fill()
-            ("原文件状态" as NSString).draw(at: NSPoint(x: 12, y: 8), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.labelColor])
-            ("解析状态" as NSString).draw(at: NSPoint(x: split + 12, y: 8), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.controlAccentColor])
+            ("原文件" as NSString).draw(at: NSPoint(x: 12, y: 8), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.labelColor])
+            ("命名字段" as NSString).draw(at: NSPoint(x: split + 12, y: 8), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.controlAccentColor])
         }
         NSColor.separatorColor.setFill(); NSRect(x: 0, y: 61, width: bounds.width, height: 1).fill()
     }
@@ -72,6 +72,30 @@ final class EditField: NSTextField {
     var fieldIndex = 0
 }
 
+private final class BatchFieldRow: NSStackView {
+    let toggle: NSButton
+    let input: NSTextField
+
+    init(title: String) {
+        toggle = NSButton(checkboxWithTitle: title, target: nil, action: nil)
+        input = NSTextField()
+        super.init(frame: .zero)
+        orientation = .horizontal; alignment = .centerY; spacing = 10
+        toggle.widthAnchor.constraint(equalToConstant: 100).isActive = true
+        input.widthAnchor.constraint(equalToConstant: 270).isActive = true
+        input.isEnabled = false
+        input.setAccessibilityLabel(title + "的统一值")
+        input.setAccessibilityHelp("勾选后输入；留空会清除该字段。")
+        toggle.target = self; toggle.action = #selector(toggleChanged)
+        addArrangedSubview(toggle); addArrangedSubview(input)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    @objc private func toggleChanged() {
+        input.isEnabled = toggle.state == .on
+        if input.isEnabled { window?.makeFirstResponder(input) }
+    }
+}
+
 final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate, NSWindowDelegate {
     private var window: NSWindow!
     private let table = NSTableView()
@@ -79,10 +103,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
     private let drop = DropZone()
     private let folders = NSButton(checkboxWithTitle: "包含子文件夹", target: nil, action: nil)
     private let files = NSButton(checkboxWithTitle: "包含内部文件", target: nil, action: nil)
-    private let status = label("拖入文件或文件夹开始检查", size: 13)
+    private let status = label("", size: 13)
     private let detail = label("", size: 12, color: .secondaryLabelColor)
     private let count = label("", size: 12, color: .secondaryLabelColor)
-    private let empty = label("还没有导入项目\n拖入上方区域，或点击“选择文件或文件夹”", size: 15, color: .secondaryLabelColor)
+    private let empty = label("还没有导入项目", size: 15, color: .secondaryLabelColor)
     private var importButton: NSButton!, batchButton: NSButton!, previewButton: NSButton!, removeButton: NSButton!, undoButton: NSButton!, selectButton: NSButton!, reportButton: NSButton!
     private var items: [Item] = []
     private var drafts: [String: Fields] = [:]
@@ -94,6 +118,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
     private var startupURLs: [URL] = []
     private var panelOpen = false
     private var lastUndo: Batch?
+    private var timeButton: NSButton!
+    private var timeEditor: TimeEditorController?
+    private var importInfoPopover: NSPopover?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -141,45 +168,52 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
     }
     private func buildWindow() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1380, height: 820), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "照片命名"; window.subtitle = "先检查，再整理，确认后同步"; window.minSize = NSSize(width: 1040, height: 700)
+        window.title = "照片命名"; window.minSize = NSSize(width: 1040, height: 650)
         window.center(); window.delegate = self; window.tabbingMode = .disallowed
-        let body = NSStackView(); body.orientation = .vertical; body.alignment = .leading; body.spacing = 16
-        body.edgeInsets = NSEdgeInsets(top: 22, left: 24, bottom: 18, right: 24)
+        let body = NSStackView(); body.orientation = .vertical; body.alignment = .leading; body.spacing = 12
+        body.edgeInsets = NSEdgeInsets(top: 18, left: 24, bottom: 18, right: 24)
         window.contentView = body
         let brand = NSImageView()
         if let logoURL = Bundle.main.url(forResource: "BrandLogo", withExtension: "png") { brand.image = NSImage(contentsOf: logoURL) }
-        brand.widthAnchor.constraint(equalToConstant: 44).isActive = true
-        brand.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        brand.setAccessibilityLabel("PhotoNaming Logo")
-        let heading = row([brand, label("照片命名", size: 24, weight: .semibold), spacer(), label("本地文件 · 确认后改名", size: 12, color: .secondaryLabelColor)])
-        add(heading, to: body)
-        add(label("日期排列清楚，主题一眼可读。分隔符由应用自动处理。", size: 13, color: .secondaryLabelColor), to: body)
+        brand.widthAnchor.constraint(equalToConstant: 32).isActive = true
+        brand.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        brand.setAccessibilityElement(false)
+        timeButton = button("修改时间…", #selector(editTimes))
+        timeButton.toolTip = "修改所选项目的时间；也可在窗口中选择文件。"
+        timeButton.setAccessibilityHelp(timeButton.toolTip)
+        undoButton = button("撤销上次改名…", #selector(undoLast))
+        add(row([brand, label("照片命名", size: 20, weight: .semibold), spacer(), timeButton, undoButton]), to: body)
         importButton = button("选择文件或文件夹…", #selector(chooseFiles))
-        let dropLabels = NSStackView(views: [label("将文件或文件夹拖到这里", size: 17, weight: .medium), label("支持多项导入；同一项目重复拖入只显示一次", size: 12, color: .secondaryLabelColor)])
-        dropLabels.orientation = .vertical; dropLabels.alignment = .leading; dropLabels.spacing = 7
+        let importHelp = NSButton(image: NSImage(systemSymbolName: "info.circle", accessibilityDescription: "导入范围说明")!, target: self, action: #selector(showImportInfo(_:)))
+        importHelp.isBordered = false
+        importHelp.toolTip = "选项只影响后续导入；重新导入可扩大范围。"
+        importHelp.setAccessibilityLabel("导入范围说明")
+        importHelp.setAccessibilityHelp(importHelp.toolTip)
+        let dropLabels = NSStackView(views: [label("将文件或文件夹拖到这里", size: 15, weight: .medium), row([folders, files, importHelp], spacing: 12)])
+        dropLabels.orientation = .vertical; dropLabels.alignment = .leading; dropLabels.spacing = 8
         let icon = NSImageView(image: NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: nil)!)
         icon.contentTintColor = .controlAccentColor; icon.widthAnchor.constraint(equalToConstant: 32).isActive = true; icon.heightAnchor.constraint(equalToConstant: 32).isActive = true
         let dropContent = row([icon, dropLabels, spacer(), importButton], spacing: 18)
         drop.addSubview(dropContent); dropContent.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([dropContent.leadingAnchor.constraint(equalTo: drop.leadingAnchor, constant: 24), dropContent.trailingAnchor.constraint(equalTo: drop.trailingAnchor, constant: -24), dropContent.centerYAnchor.constraint(equalTo: drop.centerYAnchor)])
-        drop.heightAnchor.constraint(equalToConstant: 96).isActive = true
+        drop.heightAnchor.constraint(equalToConstant: 92).isActive = true
         drop.onDrop = { [weak self] urls in self?.importURLs(urls) }; add(drop, to: body)
-        add(row([folders, files, spacer(), label("默认只检查拖入项本身 · 选项用于后续导入", size: 12, color: .secondaryLabelColor)]), to: body)
         filter.selectedSegment = 0; filter.target = self; filter.action = #selector(filterChanged)
         for i in 0..<3 { filter.setWidth(106, forSegment: i) }
         selectButton = button("选择可改名项", #selector(selectReady))
         batchButton = button("批量赋值…", #selector(batchEdit))
         removeButton = button("移出列表", #selector(removeSelected))
-        add(row([filter, spacer(), selectButton, batchButton, removeButton], spacing: 8), to: body)
+        add(row([filter, count, spacer(), selectButton, batchButton, removeButton], spacing: 8), to: body)
         table.dataSource = self; table.delegate = self; table.rowHeight = 62; table.intercellSpacing = .zero
         table.usesAlternatingRowBackgroundColors = false; table.allowsMultipleSelection = true; table.allowsEmptySelection = true
-        table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle; table.allowsColumnReordering = false
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle; table.allowsColumnReordering = false
         table.style = .plain; table.gridStyleMask = [.solidHorizontalGridLineMask]; table.gridColor = .separatorColor
-        let names = ["是否按要求", "原文件(夹)名"] + fieldTitles
-        let widths: [CGFloat] = [106, 290, 74, 60, 60, 180, 170, 170]
+        let names = ["状态", "原名称"] + fieldTitles
+        let widths: [CGFloat] = [106, 290, 74, 72, 72, 180, 170, 170]
+        let minimumWidths: [CGFloat] = [88, 180, 70, 70, 70, 140, 125, 125]
         for i in names.indices {
-            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("c\(i)")); column.title = names[i]; column.width = widths[i]; column.minWidth = widths[i]
-            column.resizingMask = i == 7 ? [.autoresizingMask, .userResizingMask] : .userResizingMask
+            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("c\(i)")); column.title = names[i]; column.width = widths[i]; column.minWidth = minimumWidths[i]
+            column.resizingMask = [.autoresizingMask, .userResizingMask]
             table.addTableColumn(column)
         }
         table.headerView = GroupHeader(frame: NSRect(x: 0, y: 0, width: 1310, height: 62))
@@ -192,18 +226,26 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
         NSLayoutConstraint.activate([empty.centerXAnchor.constraint(equalTo: tableArea.centerXAnchor), empty.centerYAnchor.constraint(equalTo: tableArea.centerYAnchor)])
         tableArea.heightAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
         add(tableArea, to: body); tableArea.setContentHuggingPriority(.defaultLow, for: .vertical)
-        add(row([count, spacer(), label("⌘ / ⇧ 多选 · 双击字段编辑 · Tab 切换", size: 12, color: .secondaryLabelColor)]), to: body)
-        add(label("年、月、日和一级标题必填；二级标题、备注可空。日期未知时请保留待填写。", size: 12, color: .secondaryLabelColor), to: body)
         detail.maximumNumberOfLines = 2; detail.lineBreakMode = .byTruncatingTail
         add(detail, to: body)
         previewButton = button("预览重命名…", #selector(preview)); previewButton.bezelColor = .controlAccentColor; previewButton.keyEquivalent = ""
-        undoButton = button("撤销上次改名…", #selector(undoLast))
         reportButton = button("查看结果…", #selector(showReport))
-        add(row([status, spacer(), reportButton, undoButton, previewButton]), to: body)
+        add(row([status, spacer(), reportButton, previewButton]), to: body)
     }
     private func add(_ view: NSView, to stack: NSStackView) {
         stack.addArrangedSubview(view); view.translatesAutoresizingMaskIntoConstraints = false
         view.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -48).isActive = true
+    }
+    @objc private func showImportInfo(_ sender: NSButton) {
+        let message = NSTextField(wrappingLabelWithString: "默认只检查导入的项目。勾选后会在后续导入时包含内部项目；重新导入可扩大范围。")
+        message.font = .systemFont(ofSize: 13)
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 78))
+        content.addSubview(message); message.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([message.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14), message.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14), message.centerYAnchor.constraint(equalTo: content.centerYAnchor)])
+        let controller = NSViewController(); controller.view = content
+        let popover = NSPopover(); popover.contentViewController = controller; popover.behavior = .transient
+        importInfoPopover = popover
+        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
     }
     private var selected: [Item] { table.selectedRowIndexes.compactMap { visible.indices.contains($0) ? visible[$0] : nil } }
     private var selectedEditable: [Item] { selected.filter { !$0.parsed.compliant } }
@@ -214,14 +256,16 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
         table.selectRowIndexes(IndexSet(visible.indices.filter { ids.contains(visible[$0].id) }), byExtendingSelection: false)
         for (i, text) in ["全部 · \(items.count)", "已符合 · \(items.filter { $0.parsed.compliant }.count)", "未符合 · \(items.filter { !$0.parsed.compliant }.count)"].enumerated() { filter.setLabel(text, forSegment: i) }
         empty.isHidden = !visible.isEmpty
-        empty.stringValue = items.isEmpty ? "还没有导入项目\n拖入上方区域，或点击“选择文件或文件夹”" : "此筛选下没有项目"
+        empty.stringValue = items.isEmpty ? "还没有导入项目" : "此筛选下没有项目"
         updateControls()
     }
     private func updateControls() {
         guard previewButton != nil else { return }
         let editing = selectedEditable
-        count.stringValue = "显示 \(visible.count) 项 · 已选 \(selected.count) 项"
-        previewButton.title = "预览重命名 · \(editing.count) 项"
+        timeButton.isEnabled = !busy
+        count.stringValue = "已选 \(selected.count) 项"
+        count.isHidden = selected.isEmpty
+        previewButton.title = editing.isEmpty ? "预览重命名" : "预览重命名 · \(editing.count) 项"
         previewButton.isEnabled = !busy && engine != nil && !editing.isEmpty
         batchButton.isEnabled = !busy && !editing.isEmpty
         removeButton.isEnabled = !busy && !selected.isEmpty
@@ -229,12 +273,38 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
         undoButton.isEnabled = !busy && lastUndo != nil
         importButton.isEnabled = !busy; folders.isEnabled = !busy; files.isEnabled = !busy; filter.isEnabled = !busy; drop.enabled = !busy
         reportButton.isEnabled = !busy && !report.isEmpty
-        if let item = selected.first {
-            let values = drafts[item.id] ?? item.parsed.fields
-            let errors = values.errors
-            detail.stringValue = item.parsed.compliant ? "已符合：六字段已解析，空可选字段显示为 —。" : (errors.isEmpty ? "字段已填全，请核对候选值并预览。磁盘原名尚未改变。" : errors.joined(separator: "；"))
-            detail.textColor = errors.isEmpty ? .secondaryLabelColor : .systemOrange
-        } else { detail.stringValue = "选中要整理的行，在蓝色区域修改；也可以多选后统一赋值。"; detail.textColor = .secondaryLabelColor }
+        let invalid = editing.compactMap { item -> (Item, [String])? in
+            let errors = (drafts[item.id] ?? item.parsed.fields).errors
+            return errors.isEmpty ? nil : (item, errors)
+        }
+        if let first = invalid.first {
+            let prefix = invalid.count > 1 ? "\(invalid.count) 项待检查 · \(first.0.url.lastPathComponent)：" : ""
+            detail.stringValue = prefix + first.1.joined(separator: "；")
+            detail.textColor = .systemOrange
+            detail.isHidden = false
+        } else { detail.stringValue = ""; detail.isHidden = true }
+    }
+    @objc private func editTimes() {
+        guard !busy, !panelOpen else { return }
+        do {
+            let editor = try TimeEditorController(journalDirectory: nil); timeEditor = editor
+            let urls = selected.map(\.url)
+            busy = true; updateControls()
+            window.beginSheet(editor.window!) { [weak self, weak editor] _ in
+                guard let self else { return }
+                if editor?.changed == true {
+                    let currentURLs = self.items.map(\.url)
+                    self.worker.async {
+                        let scan = Scanner.scan(currentURLs)
+                        DispatchQueue.main.async {
+                            self.items = scan.items; self.busy = false; self.timeEditor = nil
+                            self.reload(); self.status.stringValue = "时间处理结束，已重新读取文件状态"
+                        }
+                    }
+                } else { self.busy = false; self.timeEditor = nil; self.updateControls() }
+            }
+            if !urls.isEmpty { editor.load(urls) }
+        } catch { showError("无法打开时间编辑", error.localizedDescription) }
     }
     @objc private func chooseFiles() {
         guard !busy else { return }
@@ -291,12 +361,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
             NSLayoutConstraint.activate([text.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12), text.centerYAnchor.constraint(equalTo: container.centerYAnchor)])
             container.setAccessibilityLabel(text.stringValue)
         } else if index == 1 {
-            let name = label(Naming.display(item.url.lastPathComponent), size: 13, weight: .medium)
-            let sub = label((item.directory ? "文件夹" : "文件") + " · " + Naming.display(item.url.deletingLastPathComponent().path), size: 11, color: .secondaryLabelColor)
+            let name = label(item.url.lastPathComponent, size: 13, weight: .medium)
+            let sub = label((item.directory ? "文件夹" : "文件") + " · " + item.url.deletingLastPathComponent().path, size: 11, color: .secondaryLabelColor)
             let content = NSStackView(views: [name, sub]); content.orientation = .vertical; content.alignment = .leading; content.spacing = 4
             container.addSubview(content); content.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 9), content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8), content.centerYAnchor.constraint(equalTo: container.centerYAnchor), name.widthAnchor.constraint(equalTo: content.widthAnchor), sub.widthAnchor.constraint(equalTo: content.widthAnchor)])
-            container.toolTip = Naming.display(item.url.path) + "\n" + item.parsed.message
+            container.toolTip = item.url.path + "\n" + item.parsed.message
         } else {
             container.wantsLayer = true; container.layer?.backgroundColor = blueSurface.cgColor
             let field = EditField(); field.itemID = item.id; field.fieldIndex = index - 2
@@ -307,12 +377,19 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
             field.isBordered = !item.parsed.compliant; field.isBezeled = !item.parsed.compliant; field.bezelStyle = .roundedBezel
             field.drawsBackground = !item.parsed.compliant
             field.backgroundColor = !item.parsed.compliant && index < 6 && field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? NSColor.systemOrange.withAlphaComponent(0.10) : .textBackgroundColor
-            field.placeholderString = item.parsed.compliant ? "—" : (index < 5 ? "待填" : (index == 5 ? "待填写" : "可空"))
-            field.setAccessibilityLabel(fieldTitles[index - 2] + "，" + Naming.display(item.url.lastPathComponent))
+            let placeholder = item.parsed.compliant ? "—" : (index < 6 ? "必填" : "")
+            field.placeholderAttributedString = NSAttributedString(string: placeholder, attributes: [.foregroundColor: NSColor.labelColor.withAlphaComponent(0.75)])
+            field.setAccessibilityLabel(fieldTitles[index - 2] + "，" + item.url.lastPathComponent)
             container.addSubview(field); field.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([field.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 7), field.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -7), field.centerYAnchor.constraint(equalTo: container.centerYAnchor), field.heightAnchor.constraint(equalToConstant: 28)])
         }
         return container
+    }
+    func controlTextDidBeginEditing(_ obj: Notification) {
+        guard !busy, let field = obj.object as? EditField,
+              let index = visible.firstIndex(where: { $0.id == field.itemID }),
+              !table.isRowSelected(index) else { return }
+        table.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
     }
     func controlTextDidChange(_ obj: Notification) {
         guard let field = obj.object as? EditField, !busy else { return }
@@ -331,24 +408,20 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
         window.makeFirstResponder(nil)
         let targets = selectedEditable
         guard !targets.isEmpty else { return }
-        let alert = NSAlert(); alert.messageText = "为 \(targets.count) 项批量赋值"; alert.informativeText = "只替换勾选字段。勾选后留空会清空该字段；未勾选字段保留。"
+        let alert = NSAlert(); alert.messageText = "为 \(targets.count) 项批量赋值"; alert.informativeText = "只替换勾选的字段；留空会清除该字段。"
         alert.addButton(withTitle: "应用到草稿"); alert.addButton(withTitle: "取消")
         let stack = NSStackView(); stack.orientation = .vertical; stack.spacing = 10; stack.alignment = .leading
-        var toggles: [NSButton] = [], inputs: [NSTextField] = []
-        for title in fieldTitles {
-            let toggle = NSButton(checkboxWithTitle: title, target: nil, action: nil); toggle.widthAnchor.constraint(equalToConstant: 100).isActive = true
-            let input = NSTextField(); input.placeholderString = "输入统一值"; input.widthAnchor.constraint(equalToConstant: 270).isActive = true
-            stack.addArrangedSubview(row([toggle, input])); toggles.append(toggle); inputs.append(input)
-        }
+        let fieldRows = fieldTitles.map { BatchFieldRow(title: $0) }
+        for fieldRow in fieldRows { stack.addArrangedSubview(fieldRow) }
         stack.frame = NSRect(x: 0, y: 0, width: 390, height: 218); alert.accessoryView = stack
         panelOpen = true
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self else { return }; self.panelOpen = false
             guard response == .alertFirstButtonReturn else { return }
-            guard toggles.contains(where: { $0.state == .on }) else { return }
+            guard fieldRows.contains(where: { $0.toggle.state == .on }) else { return }
             for item in targets {
                 var values = self.drafts[item.id] ?? item.parsed.fields
-                for i in 0..<6 where toggles[i].state == .on { values.set(i, inputs[i].stringValue) }
+                for i in 0..<6 where fieldRows[i].toggle.state == .on { values.set(i, fieldRows[i].input.stringValue) }
                 self.drafts[item.id] = values
             }
             self.reload(select: Set(targets.map(\.id))); self.status.stringValue = "已更新 \(targets.count) 项草稿，尚未改名"
@@ -369,7 +442,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
             let targets = selectedEditable
             let invalid = targets.compactMap { item -> String? in
                 let errors = (drafts[item.id] ?? item.parsed.fields).errors
-                return errors.isEmpty ? nil : Naming.display(item.url.lastPathComponent) + "：" + errors.joined(separator: "；")
+                return errors.isEmpty ? nil : item.url.lastPathComponent + "：" + errors.joined(separator: "；")
             }
             if !invalid.isEmpty { throw NamingError(invalid.joined(separator: "\n")) }
             let changes = try engine.preview(targets.map { ($0, drafts[$0.id] ?? $0.parsed.fields) })
@@ -380,10 +453,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
                     let from = other.item.url.path
                     if final.hasPrefix(from + "/") { final = other.target.path + final.dropFirst(from.count) }
                 }
-                return "\(index + 1). 原名：\(Naming.display(change.item.url.lastPathComponent))\n    新名：\(Naming.display(change.target.lastPathComponent))\n    原位置：\(Naming.display(change.item.url.deletingLastPathComponent().path))\n    最终位置：\(Naming.display(final))"
+                return "\(index + 1). 原名：\(change.item.url.lastPathComponent)\n    新名：\(change.target.lastPathComponent)\n    原位置：\(change.item.url.deletingLastPathComponent().path)\n    最终位置：\(final)"
             }.joined(separator: "\n\n")
             let alert = NSAlert(); alert.messageText = "确认重命名 \(changes.count) 项？"
-            alert.informativeText = "请核对日期与标题。真实名称使用下划线分隔，界面隐藏；扩展名保留。确认后立即改名，遇到冲突不会覆盖。"
+            alert.informativeText = "确认后立即重命名；目标已存在时不会覆盖。之后可尝试使用“撤销上次改名”恢复。"
             alert.accessoryView = textAccessory(text); alert.addButton(withTitle: "确认并重命名 \(changes.count) 项"); alert.addButton(withTitle: "返回编辑")
             panelOpen = true
             alert.beginSheetModal(for: window) { [weak self] response in
@@ -424,7 +497,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
                 self.status.stringValue = "\(undo ? "已撤销" : "已改名") \(done) 项 · \(batch.errors.count + scan.skipped.count) 项异常"
                 self.report = self.status.stringValue + "\n\n" + batch.records.map { r in
                     let state = ["done": "已改名", "undone": "已撤销", "failed": "失败", "planned": "未执行", "pending": "待核实", "undoPending": "撤销待核实"][r.state] ?? r.state
-                    return "[\(state)] \(Naming.display(r.source))\n→ \(Naming.display(r.target))" + (r.error.map { "\n\($0)" } ?? "")
+                    return "[\(state)] \(r.source)\n→ \(r.target)" + (r.error.map { "\n\($0)" } ?? "")
                 }.joined(separator: "\n\n") + (scan.skipped.isEmpty ? "" : "\n\n重新检查：\n" + scan.skipped.joined(separator: "\n"))
                 self.refreshHistory(); self.reload()
                 if !batch.errors.isEmpty || !scan.skipped.isEmpty { self.showReport() }
@@ -440,7 +513,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
         guard !busy, let batch = lastUndo else { return }
         let alert = NSAlert(); alert.messageText = "撤销上次改名的 \(batch.completed) 项？"
         alert.informativeText = "按反向顺序恢复原名称。如果原位置已有新文件，或项目被移动，撤销会停止并报告，不会覆盖。"
-        let text = batch.records.reversed().filter { $0.state == "done" }.map { "\(Naming.display($0.target))\n→ \(Naming.display($0.source))" }.joined(separator: "\n\n")
+        let text = batch.records.reversed().filter { $0.state == "done" }.map { "\($0.target)\n→ \($0.source)" }.joined(separator: "\n\n")
         alert.accessoryView = textAccessory(text); alert.addButton(withTitle: "确认撤销"); alert.addButton(withTitle: "取消")
         panelOpen = true
         alert.beginSheetModal(for: window) { [weak self] response in
@@ -455,13 +528,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSourc
     }
     @objc private func showReport() {
         guard !report.isEmpty else { return }
-        let alert = NSAlert(); alert.messageText = "操作结果"; alert.informativeText = "磁盘原名经过重新读取。详细改名记录保存在本机应用支持目录。"
+        let alert = NSAlert(); alert.messageText = "操作结果"
         alert.accessoryView = textAccessory(report); alert.addButton(withTitle: "关闭")
         panelOpen = true; alert.beginSheetModal(for: window) { [weak self] _ in self?.panelOpen = false }
     }
     private func showError(_ title: String, _ message: String) {
         status.stringValue = title
-        let alert = NSAlert(); alert.alertStyle = .warning; alert.messageText = title; alert.informativeText = Naming.display(message)
+        let alert = NSAlert(); alert.alertStyle = .warning; alert.messageText = title; alert.informativeText = message
         alert.addButton(withTitle: "知道了"); panelOpen = true
         alert.beginSheetModal(for: window) { [weak self] _ in self?.panelOpen = false }
     }

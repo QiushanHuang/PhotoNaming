@@ -11,6 +11,9 @@ mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$binary_dir/PhotoNaming" "$app_dir/Contents/MacOS/PhotoNaming"
 cp .build/branding/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"
 cp assets/branding/logo.png "$app_dir/Contents/Resources/BrandLogo.png"
+# Self-contained metadata editor: invoke the unmodified bundled Perl tool.
+mkdir -p "$app_dir/Contents/Resources/ExifTool"
+cp -R Sources/NamingCore/Resources/ExifTool/. "$app_dir/Contents/Resources/ExifTool/"
 cat > "$app_dir/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

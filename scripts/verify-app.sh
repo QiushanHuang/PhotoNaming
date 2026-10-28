@@ -5,6 +5,9 @@ app_dir="${1:-$PWD/dist/照片命名.app}"
 test -x "$app_dir/Contents/MacOS/PhotoNaming"
 test -s "$app_dir/Contents/Resources/AppIcon.icns"
 test -s "$app_dir/Contents/Resources/BrandLogo.png"
+test -s "$app_dir/Contents/Resources/ExifTool/exiftool"
+test -s "$app_dir/Contents/Resources/ExifTool/LICENSE"
+/usr/bin/perl "$app_dir/Contents/Resources/ExifTool/exiftool" -ver
 plutil -lint "$app_dir/Contents/Info.plist"
 codesign --verify --strict --verbose=2 "$app_dir"
 python3 - "$app_dir" <<'PY'

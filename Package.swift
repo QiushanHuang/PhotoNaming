@@ -6,9 +6,9 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [.library(name: "NamingCore", targets: ["NamingCore"]), .executable(name: "PhotoNaming", targets: ["PhotoNaming"])],
     targets: [
-        .target(name: "NamingCore"),
+        .target(name: "NamingCore", resources: [.copy("Resources/ExifTool")]),
         .executableTarget(name: "PhotoNaming", dependencies: ["NamingCore"]),
-        .testTarget(name: "NamingCoreTests", dependencies: ["NamingCore"])
+        .testTarget(name: "NamingCoreTests", dependencies: ["NamingCore"], resources: [.copy("Fixtures")])
     ],
     swiftLanguageModes: [.v5]
 )
