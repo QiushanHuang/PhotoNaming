@@ -6,8 +6,7 @@
 
 ## Before you start
 
-This guide describes the 1.1.0 source build. As of 2026-10-28, the latest
-published release is 1.0.0 and does not include the time editor or redesigned UI.
+This guide describes PhotoNaming 1.1.0.
 
 Download from the [official releases](https://github.com/QiushanHuang/PhotoNaming/releases).
 Use an Apple Silicon Mac running macOS 14+. The app interface is Chinese; the
@@ -122,8 +121,7 @@ service needs removal.
 
 ### 安装与准备
 
-本指南对应 1.1.0 源码版本。截至 2026-10-28，最新公开发布版仍为 1.0.0，
-不包含时间编辑和新版界面。
+本指南对应照片命名 1.1.0。
 
 从[官方 Releases](https://github.com/QiushanHuang/PhotoNaming/releases)下载，使用
 macOS 14 及以上的 Apple Silicon Mac。打开 DMG，把 `照片命名.app` 拖入应用程序后推出；

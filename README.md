@@ -71,10 +71,8 @@ Button placement may differ; the steps below include English translations.*
 
 ## Install
 
-The current source and locally built app are **1.1.0**. As of 2026-10-28, the
-latest published GitHub release is **1.0.0** and does not include the time editor
-or the redesigned interface. Build the current version from source using the
-instructions below; see the [1.1.0 update notes](docs/releases/v1.1.0.md).
+Version **1.1.0** adds photo/video time editing and a redesigned interface; see
+the [update notes](docs/releases/v1.1.0.md) for details and safety limits.
 
 Download the **Apple Silicon / arm64** package from
 [the latest release](https://github.com/QiushanHuang/PhotoNaming/releases/latest).
@@ -267,9 +265,8 @@ PhotoNaming 把这些判断集中到一张表里，主要解决三件事：
 
 ### 安装
 
-当前源码及本机编译版本为 **1.1.0**。截至 2026-10-28，GitHub 最新公开发布版仍为
-**1.0.0**，不包含时间编辑与新版界面。使用下方构建步骤可从源码编译当前版本；
-详细变化见 [1.1.0 更新说明](docs/releases/v1.1.0.md)。
+**1.1.0** 新增照片与视频时间编辑，并优化了界面和操作流程；
+详细变化与使用边界见 [1.1.0 更新说明](docs/releases/v1.1.0.md)。
 
 从[最新发布页](https://github.com/QiushanHuang/PhotoNaming/releases/latest)下载
 **Apple Silicon / arm64** 安装包，适用于运行 **macOS 14 或更新版本**的 Apple Silicon Mac。
